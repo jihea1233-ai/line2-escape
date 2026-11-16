@@ -1,0 +1,2077 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070C11">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Line 2 Escape — a Seoul Metro Line 2 mission game prototype.">
+<title>Line 2 Escape · 2호선 방탈출</title>
+<style>
+/* ==========================================================================
+   LINE 2 ESCAPE — prototype styles
+   Palette: dark slate + Seoul Metro Line 2 green (#00A84D)
+   Mobile first: one column, phone width; on desktop it sits in a centred frame.
+   ========================================================================== */
+
+:root {
+  --l2: #00A84D;
+  --l2-bright: #2BD97B;
+  --l2-dim: rgba(0, 168, 77, .16);
+  --bg-0: #05080B;
+  --bg-1: #0A1016;
+  --card: rgba(255, 255, 255, .035);
+  --card-2: rgba(255, 255, 255, .06);
+  --text: #E9EFF4;
+  --text-2: #C3D0DA;
+  --muted: #8496A3;
+  --line: rgba(255, 255, 255, .085);
+  --danger: #FF7A6B;
+  --amber: #FFC861;
+  --radius: 18px;
+  --shadow: 0 18px 44px -22px rgba(0, 0, 0, .9);
+  --font: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+          "Segoe UI", "Noto Sans KR", "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html { height: 100%; }
+
+/* .btn sets display, so [hidden] needs to win over it */
+[hidden] { display: none !important; }
+
+.mono { font-family: var(--mono); }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg-0);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: flex;
+  justify-content: center;
+  overscroll-behavior-y: none;
+}
+
+/* ---- ambient background: green glow + faint subway grid ------------------ */
+.bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(820px 460px at 50% -14%, rgba(0, 168, 77, .26), transparent 62%),
+    radial-gradient(560px 420px at 108% 104%, rgba(0, 168, 77, .10), transparent 62%),
+    linear-gradient(180deg, #070C11 0%, #070B10 52%, #04070A 100%);
+}
+.bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .028) 1px, transparent 1px);
+  background-size: 46px 46px;
+  -webkit-mask-image: radial-gradient(circle at 50% 22%, #000 8%, transparent 72%);
+  mask-image: radial-gradient(circle at 50% 22%, #000 8%, transparent 72%);
+}
+
+/* ---- app shell ---------------------------------------------------------- */
+.app {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 460px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(12, 19, 26, .94), rgba(6, 10, 14, .97));
+  border-left: 1px solid rgba(255, 255, 255, .04);
+  border-right: 1px solid rgba(255, 255, 255, .04);
+}
+
+@media (min-width: 760px) {
+  body { align-items: center; padding: 26px 0; }
+  .app {
+    height: min(900px, calc(100dvh - 52px));
+    min-height: 0;
+    border-radius: 30px;
+    border: 1px solid rgba(255, 255, 255, .09);
+    box-shadow: 0 40px 90px -30px rgba(0, 0, 0, .95),
+                0 0 0 7px rgba(255, 255, 255, .018),
+                0 0 90px -40px rgba(0, 168, 77, .55);
+    overflow: hidden;
+  }
+}
+
+/* ---- top bar ------------------------------------------------------------ */
+.topbar {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(12px + env(safe-area-inset-top)) 14px 12px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(8, 13, 18, .82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+
+.line-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--l2);
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .16) inset,
+              0 6px 18px -6px rgba(0, 168, 77, .9);
+}
+
+.brand-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.18; }
+.brand-title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .085em;
+  white-space: nowrap;
+}
+.brand-sub {
+  font-size: 9.5px;
+  letter-spacing: .06em;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 7px; }
+
+/* language segmented switch */
+.lang-switch {
+  display: flex;
+  padding: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid var(--line);
+}
+.lang-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  padding: 6px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease;
+}
+.lang-btn.is-active { background: var(--l2); color: #fff; }
+.lang-btn:not(.is-active):hover { color: var(--text); }
+
+.icon-btn {
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .04);
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease, transform .12s ease;
+}
+.icon-btn:hover { color: var(--text); border-color: rgba(255, 255, 255, .2); }
+.icon-btn:active { transform: scale(.94); }
+.icon-btn:disabled { opacity: .3; cursor: default; }
+.icon-btn:disabled:hover { color: var(--muted); border-color: var(--line); }
+
+/* ---- scroll area & screens --------------------------------------------- */
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 16px calc(28px + env(safe-area-inset-bottom));
+}
+
+.screen { display: none; }
+.screen.is-active { display: block; animation: fadeUp .3s cubic-bezier(.22, 1, .36, 1); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---- landing ----------------------------------------------------------- */
+.hero { text-align: center; padding: 10px 0 18px; }
+
+.hero-badge {
+  position: relative;
+  width: 82px;
+  height: 82px;
+  margin: 0 auto 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 30%, rgba(0, 168, 77, .32), rgba(0, 168, 77, .06) 70%);
+  border: 1px solid rgba(0, 168, 77, .4);
+  box-shadow: 0 0 46px -12px rgba(0, 168, 77, .8);
+}
+.hero-badge::before,
+.hero-badge::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  border: 1px dashed rgba(0, 168, 77, .35);
+}
+.hero-badge::after {
+  inset: 8px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-style: solid;
+}
+.hero-badge span {
+  font-size: 34px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 22px rgba(0, 168, 77, .9);
+}
+
+.kicker {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--l2-bright);
+}
+
+.hero h1 {
+  margin: 10px 0 10px;
+  font-size: 30px;
+  line-height: 1.14;
+  letter-spacing: -.02em;
+  font-weight: 800;
+}
+.hero-lead {
+  margin: 0 auto;
+  max-width: 34ch;
+  font-size: 14px;
+  line-height: 1.68;
+  color: var(--text-2);
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+  margin: 16px 0 22px;
+}
+.chip {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .07em;
+  padding: 6px 11px;
+  border-radius: 999px;
+  color: var(--text-2);
+  background: rgba(255, 255, 255, .045);
+  border: 1px solid var(--line);
+}
+.chip--accent { color: var(--l2-bright); border-color: rgba(0, 168, 77, .35); background: rgba(0, 168, 77, .1); }
+
+/* language picker on the landing page */
+.lang-pick { margin: 0 0 22px; }
+.lang-pick-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 9px;
+}
+.lang-pick-row { display: flex; gap: 9px; }
+.lang-pick-btn {
+  flex: 1;
+  appearance: none;
+  padding: 12px 10px;
+  border-radius: 13px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .03);
+  color: var(--text-2);
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: .01em;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+.lang-pick-btn.is-active {
+  border-color: rgba(0, 168, 77, .6);
+  background: rgba(0, 168, 77, .14);
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 168, 77, .25) inset;
+}
+
+/* ---- generic card ------------------------------------------------------ */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 13px;
+}
+.card-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--l2-bright);
+  margin-bottom: 8px;
+}
+.card h2 { margin: 0 0 10px; font-size: 14px; letter-spacing: .01em; }
+
+.howto ol { margin: 0; padding-left: 0; list-style: none; counter-reset: step; }
+.howto li {
+  position: relative;
+  counter-increment: step;
+  padding-left: 30px;
+  margin-bottom: 9px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+.howto li:last-child { margin-bottom: 0; }
+.howto li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--l2-bright);
+  background: rgba(0, 168, 77, .12);
+  border: 1px solid rgba(0, 168, 77, .3);
+}
+
+/* ---- buttons ----------------------------------------------------------- */
+.btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 50px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: .01em;
+  cursor: pointer;
+  transition: transform .12s ease, filter .18s ease, background .18s ease,
+              border-color .18s ease, box-shadow .18s ease;
+}
+.btn:active { transform: scale(.985); }
+
+.btn-primary {
+  color: #03110A;
+  background: linear-gradient(180deg, var(--l2-bright), var(--l2));
+  box-shadow: 0 12px 30px -14px rgba(0, 168, 77, .95), 0 1px 0 rgba(255, 255, 255, .22) inset;
+}
+.btn-primary:hover { filter: brightness(1.07); }
+
+.btn-ghost {
+  color: var(--text-2);
+  background: rgba(255, 255, 255, .035);
+  border-color: var(--line);
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 650;
+}
+.btn-ghost:hover { color: var(--text); border-color: rgba(255, 255, 255, .2); }
+
+.btn-danger {
+  color: #1A0704;
+  background: linear-gradient(180deg, #FF9384, var(--danger));
+}
+
+.btn-hint {
+  color: var(--amber);
+  background: rgba(255, 200, 97, .09);
+  border-color: rgba(255, 200, 97, .28);
+  min-height: 48px;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.btn-hint:hover { background: rgba(255, 200, 97, .14); }
+.btn-hint:disabled {
+  color: var(--muted);
+  background: rgba(255, 255, 255, .03);
+  border-color: var(--line);
+  cursor: default;
+}
+
+.landing-cta { display: flex; flex-direction: column; gap: 9px; margin-top: 4px; }
+
+.fineprint {
+  margin: 9px 0 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.center { text-align: center; }
+
+/* ---- stage header ------------------------------------------------------ */
+.stage-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+.stage-meta { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+#homeBtn { flex: none; font-size: 15px; }
+
+.tag {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: var(--amber);
+  background: rgba(255, 200, 97, .1);
+  border: 1px solid rgba(255, 200, 97, .28);
+  white-space: nowrap;
+}
+.stage-counter { font-size: 10.5px; letter-spacing: .09em; color: var(--muted); white-space: nowrap; }
+
+.clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .08em;
+  color: var(--text-2);
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid var(--line);
+}
+.clock i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--l2-bright);
+  animation: blink 1.8s ease-in-out infinite;
+}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+/* ---- progress track --------------------------------------------------- */
+.track { display: flex; align-items: center; gap: 6px; margin-bottom: 18px; }
+.track-item { display: flex; align-items: center; gap: 6px; opacity: .42; }
+.track-item.is-current, .track-item.is-done { opacity: 1; }
+.track-dot {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--muted);
+  border: 1.5px solid rgba(255, 255, 255, .22);
+  transition: all .25s ease;
+}
+.track-item.is-done .track-dot { background: var(--l2); border-color: var(--l2); color: #fff; }
+.track-item.is-current .track-dot {
+  border-color: var(--l2);
+  color: var(--l2-bright);
+  box-shadow: 0 0 0 4px rgba(0, 168, 77, .14);
+}
+.track-label { font-size: 10.5px; letter-spacing: .04em; color: var(--muted); white-space: nowrap; }
+.track-item.is-current .track-label { color: var(--text); }
+.track-link { flex: 1; height: 2px; min-width: 12px; border-radius: 2px; background: rgba(255, 255, 255, .1); }
+.track-link.is-done { background: var(--l2); }
+
+/* ---- station plate ---------------------------------------------------- */
+.plate {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #101B23, #0B141A);
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+.line-badge--sm { width: 22px; height: 22px; font-size: 11px; }
+.plate-ko { font-size: 15px; font-weight: 750; letter-spacing: -.01em; }
+.plate-en {
+  margin-left: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.plate-code {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .1em;
+  color: var(--l2-bright);
+}
+
+/* ---- mission ---------------------------------------------------------- */
+.mission-title {
+  margin: 0 0 10px;
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: -.02em;
+  font-weight: 800;
+}
+.story {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.78;
+  color: var(--text-2);
+  white-space: pre-line;
+}
+
+/* photo placeholder / real photo */
+.photo { margin: 0 0 14px; }
+.photo-frame {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: #0A1218;
+}
+.photo-frame img { display: block; width: 100%; height: auto; }
+
+.photo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 128px;
+  padding: 20px 16px;
+  text-align: center;
+  border: 1px dashed rgba(255, 255, 255, .16);
+  border-radius: 16px;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, .018) 0 12px, transparent 12px 24px),
+    #0A1218;
+}
+.photo-icon { color: var(--l2); opacity: .8; }
+.photo-note {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.photo-caption { font-size: 11.5px; line-height: 1.55; color: #6F838F; max-width: 30ch; }
+
+/* clue panel styled like platform signage */
+.clue-card {
+  background: #08110C;
+  border: 1px solid rgba(0, 168, 77, .26);
+  border-left: 3px solid var(--l2);
+}
+.clue-text {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.95;
+  color: #D6E7DB;
+  white-space: pre-line;
+  overflow-wrap: break-word;
+}
+
+/* ---- answer area ------------------------------------------------------ */
+.question { margin: 0 0 13px; font-size: 14.5px; line-height: 1.65; color: var(--text); }
+
+.answer-form { display: flex; flex-direction: column; gap: 9px; }
+
+.answer-input {
+  width: 100%;
+  min-height: 54px;
+  padding: 14px 16px;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  background: rgba(0, 0, 0, .32);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 17px;      /* >=16px keeps iOS from zooming on focus */
+  letter-spacing: .06em;
+  outline: none;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.answer-input::placeholder { color: #5D6E7A; letter-spacing: .04em; font-family: var(--font); }
+.answer-input:focus {
+  border-color: rgba(0, 168, 77, .75);
+  box-shadow: 0 0 0 4px rgba(0, 168, 77, .14);
+  background: rgba(0, 0, 0, .45);
+}
+
+.choices { display: flex; flex-direction: column; gap: 8px; margin-bottom: 11px; }
+.choice {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 52px;
+  padding: 11px 13px;
+  text-align: left;
+  border-radius: 13px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .03);
+  color: var(--text-2);
+  font-family: var(--font);
+  font-size: 13.5px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: all .16s ease;
+}
+.choice:hover { border-color: rgba(255, 255, 255, .2); background: rgba(255, 255, 255, .055); }
+.choice-key {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  font-size: 10.5px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid var(--line);
+  transition: all .16s ease;
+}
+.choice.is-picked {
+  border-color: rgba(0, 168, 77, .7);
+  background: rgba(0, 168, 77, .12);
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 168, 77, .3) inset;
+}
+.choice.is-picked .choice-key { background: var(--l2); border-color: var(--l2); color: #fff; }
+
+/* wrong-answer feedback */
+.shake { animation: shake .42s cubic-bezier(.36, .07, .19, .97); }
+@keyframes shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-7px); }
+  40%, 60% { transform: translateX(7px); }
+}
+
+/* solved panel */
+.solved-card {
+  border-color: rgba(0, 168, 77, .45);
+  background: linear-gradient(180deg, rgba(0, 168, 77, .16), rgba(0, 168, 77, .05));
+  animation: popIn .34s cubic-bezier(.22, 1, .36, 1);
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+.solved-mark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+  border-radius: 50%;
+  background: var(--l2);
+  color: #fff;
+  font-size: 21px;
+  font-weight: 800;
+  box-shadow: 0 0 0 6px rgba(0, 168, 77, .13);
+}
+.success-text { margin: 0 0 15px; font-size: 14px; line-height: 1.72; color: #DFF3E6; white-space: pre-line; }
+
+/* ---- award / clear screen -------------------------------------------- */
+.award { text-align: center; padding: 12px 0 6px; }
+.award-ring {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  margin: 0 auto 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 168, 77, .45);
+  background: radial-gradient(circle at 50% 35%, rgba(0, 168, 77, .3), transparent 70%);
+  box-shadow: 0 0 60px -14px rgba(0, 168, 77, .85);
+  animation: popIn .45s cubic-bezier(.22, 1, .36, 1);
+}
+.award-ring::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 1px dashed rgba(0, 168, 77, .32);
+}
+.award-ring span { font-size: 40px; font-weight: 800; color: #fff; text-shadow: 0 0 24px rgba(0, 168, 77, .8); }
+
+.award h1 { margin: 8px 0 8px; font-size: 27px; letter-spacing: -.02em; }
+.award p { margin: 0 auto; max-width: 32ch; font-size: 13.5px; line-height: 1.65; color: var(--text-2); }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 20px 0 13px; }
+.stat {
+  padding: 13px 8px;
+  border-radius: 14px;
+  text-align: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.stat-value {
+  display: block;
+  font-family: var(--mono);
+  font-size: 18px;
+  letter-spacing: -.01em;
+  color: #fff;
+  line-height: 1.2;
+}
+.stat-key {
+  display: block;
+  margin-top: 5px;
+  font-size: 9.5px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.route-list { margin: 0; padding: 0; list-style: none; }
+.route-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .055);
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.route-row:last-child { border-bottom: 0; }
+.route-row .ok {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 9px;
+  color: #03110A;
+  background: var(--l2-bright);
+}
+.route-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.route-hints { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: .04em; }
+
+/* ---- hint drawer ------------------------------------------------------ */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(2, 5, 8, .66);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .26s ease;
+}
+.backdrop.is-open { opacity: 1; pointer-events: auto; }
+
+.drawer {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 60;
+  width: 100%;
+  max-width: 460px;
+  max-height: 76vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 15px 17px calc(18px + env(safe-area-inset-bottom));
+  border-radius: 24px 24px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, .12);
+  background: linear-gradient(180deg, #131F28, #0C141A);
+  box-shadow: 0 -22px 60px rgba(0, 0, 0, .7);
+  transform: translate(-50%, 105%);
+  transition: transform .34s cubic-bezier(.22, 1, .36, 1);
+}
+.drawer.is-open { transform: translate(-50%, 0); }
+.drawer::before {
+  content: "";
+  display: block;
+  width: 38px;
+  height: 4px;
+  margin: -3px auto 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .18);
+}
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.drawer-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+.hint-block {
+  padding: 12px 13px;
+  margin-bottom: 9px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid var(--line);
+  animation: fadeUp .28s ease;
+}
+.hint-block .hint-n {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 5px;
+}
+.hint-block p { margin: 0; font-size: 13px; line-height: 1.65; color: var(--text-2); }
+
+/* ---- toast ------------------------------------------------------------ */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 80;
+  transform: translate(-50%, 16px);
+  max-width: min(400px, calc(100vw - 32px));
+  padding: 11px 15px;
+  border-radius: 13px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: center;
+  color: #fff;
+  background: #1B2831;
+  border: 1px solid rgba(255, 255, 255, .14);
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, .85);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .22s ease, transform .22s ease;
+}
+.toast.is-shown { opacity: 1; transform: translate(-50%, 0); }
+.toast.is-error { background: #35191B; border-color: rgba(255, 122, 107, .5); color: #FFD9D4; }
+.toast.is-ok { background: #0C2018; border-color: rgba(0, 168, 77, .55); color: #CFF5DF; }
+
+/* ---- reset confirm modal --------------------------------------------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(2, 5, 8, .72);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+.modal-backdrop.is-open { opacity: 1; pointer-events: auto; }
+.modal {
+  width: 100%;
+  max-width: 340px;
+  padding: 20px;
+  border-radius: 20px;
+  background: #121D25;
+  border: 1px solid rgba(255, 255, 255, .12);
+  box-shadow: 0 30px 70px -20px rgba(0, 0, 0, .9);
+  transform: scale(.96);
+  transition: transform .2s ease;
+}
+.modal-backdrop.is-open .modal { transform: none; }
+.modal h2 { margin: 0 0 8px; font-size: 16.5px; letter-spacing: -.01em; }
+.modal p { margin: 0 0 17px; font-size: 12.5px; line-height: 1.62; color: var(--text-2); }
+.modal-actions { display: flex; gap: 8px; }
+.modal-actions .btn { min-height: 44px; font-size: 13px; }
+
+/* ---- small print / footer -------------------------------------------- */
+.foot-note {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  font-size: 10.5px;
+  line-height: 1.62;
+  color: #61737F;
+  text-align: center;
+}
+
+/* ---- desktop framing tweaks ------------------------------------------ */
+@media (min-width: 760px) {
+  .drawer { bottom: 26px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, .12); }
+  .toast { bottom: 54px; }
+}
+
+/* ---- accessibility / motion ------------------------------------------ */
+:focus-visible {
+  outline: 2px solid var(--l2-bright);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+@media (max-width: 340px) {
+  .hero h1 { font-size: 26px; }
+  .brand-sub { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg" aria-hidden="true"></div>
+
+<main class="app">
+
+  <!-- ======================= TOP BAR ======================= -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="line-badge" aria-hidden="true">2</span>
+      <div class="brand-text">
+        <span class="brand-title">LINE 2 ESCAPE</span>
+        <span class="brand-sub">서울 지하철 2호선 · SEOUL METRO</span>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <div class="lang-switch" role="group" aria-label="Language / 언어">
+        <button type="button" class="lang-btn" data-lang="en" lang="en">EN</button>
+        <button type="button" class="lang-btn" data-lang="ko" lang="ko">KO</button>
+      </div>
+      <button type="button" class="icon-btn" id="resetBtn" data-i18n-aria="resetAria" aria-label="Reset progress">↺</button>
+    </div>
+  </header>
+
+  <div class="scroll" id="scrollArea">
+
+    <!-- ======================= LANDING ======================= -->
+    <section class="screen is-active" id="screen-landing">
+      <div class="hero">
+        <div class="hero-badge" aria-hidden="true"><span>2</span></div>
+        <div class="kicker" data-i18n="kicker">Seoul Metro · Line 2</div>
+        <h1 data-i18n="heroTitle">The Line 2 Escape</h1>
+        <p class="hero-lead" data-i18n="heroLead"></p>
+      </div>
+
+      <div class="chip-row">
+        <span class="chip chip--accent" data-i18n="protoTag"></span>
+        <span class="chip" data-i18n="chipStations"></span>
+        <span class="chip" data-i18n="chipTime"></span>
+      </div>
+
+      <div class="lang-pick">
+        <div class="lang-pick-label" data-i18n="langPickLabel"></div>
+        <div class="lang-pick-row">
+          <button type="button" class="lang-pick-btn" data-lang="en" lang="en">English</button>
+          <button type="button" class="lang-pick-btn" data-lang="ko" lang="ko">한국어</button>
+        </div>
+      </div>
+
+      <div class="card howto">
+        <h2 data-i18n="howToTitle"></h2>
+        <ol>
+          <li data-i18n="howTo1"></li>
+          <li data-i18n="howTo2"></li>
+          <li data-i18n="howTo3"></li>
+        </ol>
+      </div>
+
+      <div class="landing-cta">
+        <button type="button" class="btn btn-primary" id="startBtn"></button>
+        <p class="fineprint center" id="resumeNote" hidden></p>
+        <button type="button" class="btn btn-ghost" id="landingResetBtn" data-i18n="resetProgress" hidden></button>
+      </div>
+
+      <p class="foot-note" data-i18n="protoNote"></p>
+    </section>
+
+    <!-- ======================= STAGE ======================= -->
+    <section class="screen" id="screen-stage">
+      <div class="stage-head">
+        <button type="button" class="icon-btn" id="homeBtn" data-i18n-aria="backHome" title="←">←</button>
+        <div class="stage-meta">
+          <span class="tag" id="stageTag"></span>
+          <span class="stage-counter mono" id="stageCounter"></span>
+        </div>
+        <span class="clock" id="stageClock"><i aria-hidden="true"></i><span id="clockText">00:00</span></span>
+      </div>
+
+      <div class="track" id="stageProgress"></div>
+
+      <div id="stageBody"></div>
+    </section>
+
+    <!-- ======================= CLEAR ======================= -->
+    <section class="screen" id="screen-clear">
+      <div id="clearBody"></div>
+    </section>
+
+  </div>
+</main>
+
+<!-- ======================= HINT DRAWER ======================= -->
+<div class="backdrop" id="hintBackdrop"></div>
+<aside class="drawer" id="hintDrawer" aria-hidden="true" aria-label="Hints">
+  <div class="drawer-head">
+    <span class="drawer-title" data-i18n="hintsTitle"></span>
+    <button type="button" class="icon-btn" id="drawerClose" data-i18n-aria="close" aria-label="Close">✕</button>
+  </div>
+  <div id="drawerBody"></div>
+</aside>
+
+<!-- ======================= RESET MODAL ======================= -->
+<div class="modal-backdrop" id="resetModal" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
+    <h2 id="resetModalTitle"></h2>
+    <p id="resetModalBody"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="resetCancel"></button>
+      <button type="button" class="btn btn-danger" id="resetConfirm"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= TOAST ======================= -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <p style="padding:20px;text-align:center;color:#ccc">
+    This prototype needs JavaScript. Please enable it and reload.
+  </p>
+</noscript>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ==========================================================================
+     1. MISSIONS — 이 파일에서 손댈 곳은 여기뿐입니다.
+     ==========================================================================
+
+     미션(역) 하나를 추가하려면 아래 배열에 객체를 하나 더 넣으세요.
+     화면·진행바·클리어 화면은 자동으로 늘어납니다. UI 코드는 고칠 필요 없습니다.
+
+     [ 항목 설명 ]
+       id            고유 문자열. 진행 저장(localStorage) 키로 쓰이므로 역마다 달라야 합니다.
+       tag           카드에 표시할 짧은 꼬리표. "sample" 이면 화면에서 [Sample]/[샘플]로 번역됩니다.
+       code          서울 지하철 안내판에 적힌 역 번호 (예: 성수 = "211", 을지로3가 = "203").
+       station       { en, ko } 짧은 역 이름.
+       missionTitle  { en, ko } 미션 제목.
+       story         { en, ko } 이 장면의 이야기. 줄바꿈(\n) 사용 가능.
+       clue          { en, ko } 승강장에서 보이는 단서(안내판·표찰 등). 줄바꿈(\n) 사용 가능.
+       image         "" 또는 "photos/seongsu.jpg" — 비워 두면 사진 자리 표시자가 나옵니다.
+       photoCaption  { en, ko } 사진 자리 표시자 아래 설명.
+       question      { en, ko } 플레이어에게 던지는 질문.
+       type          "text" (직접 입력) 또는 "choice" (객관식).
+       placeholder   { en, ko } text 전용 입력 힌트.
+       answers       [ ... ]    text 전용. 정답을 여러 개 허용. 대소문자·띄어쓰기·문장부호 무시.
+       choices       [ { en, ko }, ... ]  choice 전용. 보기 목록.
+       correct       choice 전용. 정답 보기의 인덱스(0부터 시작).
+       hints         [ { en, ko }, { en, ko } ]  힌트 2단계. 순서대로 열립니다.
+       success       { en, ko } 정답 직후 보여 줄 이야기.
+
+     [ 예시 — 새 역 추가 ]
+       {
+         id: "hongdae",
+         tag: "sample",
+         code: "239",
+         station: { en: "Hongik Univ.", ko: "홍대입구" },
+         missionTitle: { en: "The Busker's Chord", ko: "거리의 화음" },
+         story: { en: "…", ko: "…" },
+         clue: { en: "…", ko: "…" },
+         image: "",
+         photoCaption: { en: "Exit 9, night", ko: "9번 출구, 밤" },
+         question: { en: "…", ko: "…" },
+         type: "text",
+         placeholder: { en: "Type a number", ko: "숫자를 입력" },
+         answers: ["239", "2-3-9"],
+         hints: [ { en: "…", ko: "…" }, { en: "…", ko: "…" } ],
+         success: { en: "…", ko: "…" }
+       }
+     ========================================================================== */
+
+  var MISSIONS = [
+
+    /* ---------- STAGE 1 · 성수 Seongsu — 짧은 답 입력(text) ---------- */
+    {
+      id: 'seongsu',
+      tag: 'sample',
+      code: '211',
+      station: { en: 'Seongsu', ko: '성수' },
+      missionTitle: { en: 'The Locker at Exit 1', ko: '1번 출구의 사물함' },
+      story: {
+        en: 'Seongsu smells of coffee and fresh paint. By Exit 1 a rusty locker waits with a three-digit dial — and a note taped to the door: "I am written on every sign in this station. Say my number and I will open."',
+        ko: '성수동에는 커피 향과 새 페인트 냄새가 가득하다. 1번 출구 옆, 녹슨 사물함에 세 자리 자물쇠가 달려 있고 문에는 쪽지가 붙어 있다. "나는 이 역의 모든 안내판에 적혀 있다. 내 번호를 말하면 열리리라."'
+      },
+      clue: {
+        en: 'You look up at the platform sign above the tracks:\n\n  ②  성수 Seongsu   211\n\nA small plate under it reads: "Every station on Line 2 carries its own three-digit number."',
+        ko: '승강장 위 안내판을 올려다본다.\n\n  ②  성수 Seongsu   211\n\n그 아래 작은 표찰이 보인다. "2호선의 모든 역에는 저마다 세 자리 번호가 있다."'
+      },
+      image: '',
+      photoCaption: {
+        en: 'Platform sign at Seongsu. Swap in your own photo with the "image" field.',
+        ko: '성수역 승강장 안내판. "image" 항목에 직접 찍은 사진을 넣으세요.'
+      },
+      question: {
+        en: 'Type the three-digit station number to open the locker.',
+        ko: '사물함을 열 세 자리 역 번호를 입력하세요.'
+      },
+      type: 'text',
+      placeholder: { en: 'e.g. 000', ko: '예: 000' },
+      answers: [
+        '211',
+        'number 211',
+        'no. 211',
+        '211호',
+        '211번',
+        '211역',
+        '2-1-1',
+        'two one one'
+      ],
+      hints: [
+        {
+          en: 'Read the number printed beside the station name — not the exit number.',
+          ko: '역 이름 옆에 인쇄된 번호를 보세요. 출구 번호가 아닙니다.'
+        },
+        {
+          en: 'Seongsu is station 211: the first digit is the line, then the order along the circle. 2 · 1 · 1.',
+          ko: '성수는 211번 역입니다. 첫 자리는 노선 번호, 나머지는 순환선 순서입니다. 2 · 1 · 1.'
+        }
+      ],
+      success: {
+        en: 'The dial clicks. Inside the locker: a green ticket stamped EULJIRO 3-GA.',
+        ko: '자물쇠가 딸깍 열린다. 안에는 "을지로3가" 도장이 찍힌 초록색 표가 들어 있다.'
+      }
+    },
+
+    /* ---------- STAGE 2 · 을지로3가 Euljiro 3-ga — 객관식(choice) ---------- */
+    {
+      id: 'euljiro3ga',
+      tag: 'sample',
+      code: '203',
+      station: { en: 'Euljiro 3(sam)-ga', ko: '을지로3가' },
+      missionTitle: { en: 'The Transfer Gate', ko: '환승 게이트' },
+      story: {
+        en: 'The ticket is warm in your hand. One stop later the doors open onto a long corridor of signs, and a barrier gate stands across it — three gates, three colours. A speaker crackles: "I am not the line you came on. Find my colour."',
+        ko: '손안의 표가 따뜻하다. 한 정거장 뒤, 문이 열리자 안내판이 늘어선 긴 복도가 나오고 가운데에 개찰구가 서 있다. 게이트는 셋, 색도 셋. 스피커가 지직거린다. "나는 네가 타고 온 노선이 아니다. 내 색을 찾아라."'
+      },
+      clue: {
+        en: 'Above the corridor the transfer sign reads:\n\n  ②  을지로3가 Euljiro 3(sam)-ga\n  ↳ ③  충무로 Chungmuro   →\n\nA sticker beside the gate: "Line 2 passengers: your next clue is one line away — the one that runs orange."',
+        ko: '복도 위 환승 안내판이 보인다.\n\n  ②  을지로3가 Euljiro 3(sam)-ga\n  ↳ ③  충무로 Chungmuro   →\n\n게이트 옆 스티커. "2호선 승객: 다음 단서는 한 노선 건너, 주황색으로 달리는 노선에 있다."'
+      },
+      image: '',
+      photoCaption: {
+        en: 'Transfer sign at Euljiro 3-ga. Swap in your own photo with the "image" field.',
+        ko: '을지로3가역 환승 안내판. "image" 항목에 직접 찍은 사진을 넣으세요.'
+      },
+      question: {
+        en: 'Which gate do you walk through?',
+        ko: '어느 게이트로 지나가야 할까요?'
+      },
+      type: 'choice',
+      choices: [
+        { en: 'Green gate · Line 2', ko: '초록 게이트 · 2호선' },
+        { en: 'Orange gate · Line 3', ko: '주황 게이트 · 3호선' },
+        { en: 'Blue gate · Line 4', ko: '파란 게이트 · 4호선' },
+        { en: 'Purple gate · Line 5', ko: '보라 게이트 · 5호선' }
+      ],
+      correct: 1,
+      hints: [
+        {
+          en: 'You arrived on Line 2 — the green one. The note says the next clue is one line away.',
+          ko: '지금 탄 노선은 2호선, 초록색입니다. 쪽지는 다음 단서가 한 노선 건너에 있다고 합니다.'
+        },
+        {
+          en: 'The transfer sign points to ③ Chungmuro. In Seoul Metro, Line 3 is the orange line.',
+          ko: '환승 안내판은 ③ 충무로 방향을 가리킵니다. 서울 지하철에서 3호선은 주황색입니다.'
+        }
+      ],
+      success: {
+        en: 'The orange gate blinks green and opens. Beyond it the corridor ends at a small box with today\'s date on it — the end of the sample route.',
+        ko: '주황 게이트가 초록불로 바뀌며 열린다. 복도 끝, 오늘 날짜가 적힌 작은 상자가 보인다. 샘플 코스의 끝이다.'
+      }
+    }
+
+  ];
+
+  /* ==========================================================================
+     2. UI 문구 — 화면에 나오는 고정 텍스트 (en / ko)
+     ========================================================================== */
+  var UI = {
+    kicker: { en: 'Seoul Metro · Line 2', ko: '서울 지하철 · 2호선' },
+    heroTitle: { en: 'The Line 2 Escape', ko: '2호선 탈출 게임' },
+    heroLead: {
+      en: 'A mission game for the green circle line. Read the platform, find what the stations are hiding, and ride to the end.',
+      ko: '초록 순환선을 따라가는 미션 게임. 승강장을 읽고, 역이 감춘 것을 찾아 끝까지 이동하세요.'
+    },
+    protoTag: { en: 'Prototype · sample route', ko: '프로토타입 · 샘플 코스' },
+    chipStations: { en: '2 stations', ko: '2개 역' },
+    chipTime: { en: '~5 min', ko: '약 5분' },
+    langPickLabel: { en: 'Choose your language', ko: '언어를 선택하세요' },
+    howToTitle: { en: 'How to play', ko: '플레이 방법' },
+    howTo1: { en: 'Read the story, then the clue from the platform.', ko: '이야기를 읽고 승강장 단서를 확인합니다.' },
+    howTo2: { en: 'Answer by typing or tapping — English or Korean both work.', ko: '직접 입력하거나 골라서 답합니다. 영어와 한국어 모두 인정됩니다.' },
+    howTo3: { en: 'Stuck? Open a hint. It costs nothing, but the clock keeps running.', ko: '막히면 힌트를 여세요. 비용은 없지만 시간은 계속 흐릅니다.' },
+    start: { en: 'Start the escape', ko: '탈출 시작' },
+    continueAt: { en: 'Continue · station {n}', ko: '이어하기 · {n}번째 역' },
+    playAgain: { en: 'Play again', ko: '다시 플레이' },
+    progressLine: { en: 'In progress · station {n} of {total} · {time}', ko: '진행 중 · {total}개 중 {n}번째 역 · {time}' },
+    resetProgress: { en: 'Reset progress', ko: '진행 초기화' },
+    protoNote: {
+      en: 'Sample content only. Stories, photos and answers are placeholders you can replace in the MISSIONS data at the top of the script.',
+      ko: '샘플 콘텐츠입니다. 이야기·사진·정답은 스크립트 상단의 MISSIONS 데이터에서 직접 바꿀 수 있습니다.'
+    },
+    sampleTag: { en: '[Sample]', ko: '[샘플]' },
+    stationOf: { en: 'Station {n} of {total}', ko: '역 {n} / {total}' },
+    clueLabel: { en: 'What you see', ko: '현장 단서' },
+    answerLabel: { en: 'Your mission', ko: '당신의 미션' },
+    photoPlaceholder: { en: 'Landmark photo', ko: '지형지물 사진' },
+    checkAnswer: { en: 'Check answer', ko: '정답 확인' },
+    choosePrompt: { en: 'Tap an answer, then check.', ko: '답을 고른 뒤 확인하세요.' },
+    answerNote: { en: 'English or Korean both work. Spaces and punctuation are ignored.', ko: '영어·한국어 모두 인정됩니다. 띄어쓰기와 문장부호는 무시됩니다.' },
+    hintBtnCount: { en: 'Hint · {n} left', ko: '힌트 · {n}개 남음' },
+    hintBtnNone: { en: 'No hints left', ko: '힌트 없음' },
+    hintsTitle: { en: 'Hints', ko: '힌트' },
+    hintN: { en: 'Hint {n}', ko: '힌트 {n}' },
+    showHintN: { en: 'Show hint {n}', ko: '힌트 {n} 보기' },
+    hintDone: { en: 'Both hints are open. The answer is right in front of you.', ko: '힌트를 모두 열었습니다. 답은 바로 눈앞에 있습니다.' },
+    close: { en: 'Close', ko: '닫기' },
+    cleared: { en: 'Station cleared', ko: '역 통과' },
+    nextStation: { en: 'Next station', ko: '다음 역' },
+    finishRoute: { en: 'Finish the route', ko: '코스 완주' },
+    toastEmpty: { en: 'Type an answer first.', ko: '답을 먼저 입력하세요.' },
+    toastSelect: { en: 'Pick one answer first.', ko: '답을 먼저 선택하세요.' },
+    toastWrong: { en: 'Not quite — check the sign again.', ko: '아쉬워요 — 안내판을 다시 보세요.' },
+    toastWrongChoice: { en: 'That gate leads somewhere else.', ko: '그 게이트는 다른 곳으로 이어집니다.' },
+    toastRight: { en: 'Correct — unlocked.', ko: '정답 — 잠금 해제' },
+    clearTitle: { en: 'Escaped', ko: '탈출 성공' },
+    clearLead: { en: 'You rode the green circle to the end of the sample route.', ko: '초록 순환선의 샘플 코스를 끝까지 통과했습니다.' },
+    totalTime: { en: 'Total time', ko: '총 시간' },
+    hintsUsed: { en: 'Hints used', ko: '사용한 힌트' },
+    stationsDone: { en: 'Stations cleared', ko: '통과한 역' },
+    routeSummary: { en: 'Route summary', ko: '코스 요약' },
+    clearNote: {
+      en: 'This is where the sample route ends. Add more stations to MISSIONS and the game extends automatically.',
+      ko: '샘플 코스는 여기서 끝납니다. MISSIONS에 역을 추가하면 게임이 자동으로 이어집니다.'
+    },
+    resetTitle: { en: 'Reset progress?', ko: '진행을 초기화할까요?' },
+    resetBody: { en: 'Your current run, timer and hints will be cleared. This cannot be undone.', ko: '진행 상황과 타이머, 힌트 기록이 모두 삭제됩니다. 되돌릴 수 없습니다.' },
+    resetConfirm: { en: 'Reset', ko: '초기화' },
+    cancel: { en: 'Keep playing', ko: '계속하기' },
+    resetAria: { en: 'Reset progress', ko: '진행 초기화' },
+    backHome: { en: 'Back to start', ko: '처음으로' }
+  };
+
+  /* ==========================================================================
+     3. 상태 · 저장 — localStorage 에 진행 상황을 남겨 새로고침해도 이어집니다.
+     ========================================================================== */
+  var STORAGE_KEY = 'line2escape.v1';
+  var state = null;
+  var picked = {};          /* stage id -> 선택한 보기 번호 (객관식, 세션 한정) */
+  var toastTimer = null;
+  var clockTimer = null;
+
+  function freshState() {
+    return {
+      v: 1,
+      lang: 'en',
+      screen: 'landing',    /* landing | stage | clear */
+      stageIndex: 0,
+      startedAt: null,      /* ms timestamp, 타이머 시작 */
+      finishedAt: null,     /* ms timestamp, 완주 시각 */
+      hints: {},            /* stage id -> 열어 본 힌트 수 (0~2) */
+      solved: {},           /* stage id -> true */
+      draft: ''             /* 입력 중인 답 (언어 전환·새로고침에도 유지) */
+    };
+  }
+
+  function loadState() {
+    var base = freshState();
+    var raw = null;
+    try { raw = window.localStorage.getItem(STORAGE_KEY); } catch (e) { raw = null; }
+    if (!raw) return base;
+    var saved;
+    try { saved = JSON.parse(raw); } catch (e) { return base; }
+    if (!saved || typeof saved !== 'object') return base;
+
+    base.lang = (saved.lang === 'ko' || saved.lang === 'en') ? saved.lang : base.lang;
+    base.screen = (saved.screen === 'stage' || saved.screen === 'clear') ? saved.screen : 'landing';
+    base.stageIndex = typeof saved.stageIndex === 'number' ? saved.stageIndex : 0;
+    base.startedAt = typeof saved.startedAt === 'number' ? saved.startedAt : null;
+    base.finishedAt = typeof saved.finishedAt === 'number' ? saved.finishedAt : null;
+    base.hints = (saved.hints && typeof saved.hints === 'object') ? saved.hints : {};
+    base.solved = (saved.solved && typeof saved.solved === 'object') ? saved.solved : {};
+    base.draft = typeof saved.draft === 'string' ? saved.draft : '';
+
+    /* 저장된 단계가 지금 MISSIONS 범위를 벗어나면 안전하게 되돌립니다. */
+    if (base.stageIndex < 0 || base.stageIndex >= MISSIONS.length) {
+      base.stageIndex = 0;
+      base.screen = 'landing';
+    }
+    return base;
+  }
+
+  function saveState() {
+    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* 사생활 보호 모드 등 */ }
+  }
+
+  /* ==========================================================================
+     4. 도우미 함수
+     ========================================================================== */
+  function byId(id) { return document.getElementById(id); }
+
+  function t(key) {
+    var row = UI[key];
+    if (!row) return key;
+    return row[state.lang] || row.en || key;
+  }
+
+  /* 미션 안의 { en, ko } 필드 읽기 (없으면 반대 언어, 그것도 없으면 빈 문자열) */
+  function tr(field) {
+    if (!field) return '';
+    if (typeof field === 'string') return field;
+    return field[state.lang] || field.en || field.ko || '';
+  }
+
+  function fill(template, map) {
+    var out = template;
+    for (var k in map) {
+      if (Object.prototype.hasOwnProperty.call(map, k)) {
+        out = out.split('{' + k + '}').join(String(map[k]));
+      }
+    }
+    return out;
+  }
+
+  function esc(value) {
+    return String(value === null || value === undefined ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function nl2br(value) {
+    return esc(value).replace(/\n/g, '<br>');
+  }
+
+  /* 정답 비교용 정규화: 소문자, 괄호 제거, 문자·숫자·한글만 남김,
+     끝에 붙은 번/호/역 제거 → "No. 211" 과 "211번" 이 모두 "211" 로 만납니다. */
+  function normalize(value) {
+    var s = String(value === null || value === undefined ? '' : value).toLowerCase();
+    s = s.replace(/\([^)]*\)/g, ' ');
+    s = s.replace(/[^0-9a-z가-힣]/g, '');
+    s = s.replace(/(번|호|역)$/, '');
+    return s;
+  }
+
+  function fmtTime(ms) {
+    var total = Math.max(0, Math.floor(ms / 1000));
+    var h = Math.floor(total / 3600);
+    var m = Math.floor((total % 3600) / 60);
+    var s = total % 60;
+    var mm = (m < 10 ? '0' : '') + m;
+    var ss = (s < 10 ? '0' : '') + s;
+    if (h > 0) return h + ':' + mm + ':' + ss;
+    return mm + ':' + ss;
+  }
+
+  function elapsedMs() {
+    if (!state.startedAt) return 0;
+    var end = state.finishedAt || Date.now();
+    return Math.max(0, end - state.startedAt);
+  }
+
+  function totalHintsUsed() {
+    var sum = 0;
+    for (var i = 0; i < MISSIONS.length; i++) {
+      sum += (state.hints[MISSIONS[i].id] || 0);
+    }
+    return sum;
+  }
+
+  function showScreen(name) {
+    var screens = ['landing', 'stage', 'clear'];
+    for (var i = 0; i < screens.length; i++) {
+      var el = byId('screen-' + screens[i]);
+      if (el) el.classList.toggle('is-active', screens[i] === name);
+    }
+  }
+
+  function showToast(message, kind) {
+    var el = byId('toast');
+    if (!el) return;
+    el.textContent = message;
+    el.className = 'toast is-shown' + (kind ? ' is-' + kind : '');
+    if (toastTimer) { clearTimeout(toastTimer); }
+    toastTimer = setTimeout(function () {
+      el.className = 'toast' + (kind ? ' is-' + kind : '');
+    }, 2400);
+  }
+
+  function shake(el) {
+    if (!el) return;
+    el.classList.remove('shake');
+    /* 리플로우를 강제해 애니메이션을 다시 재생 */
+    void el.offsetWidth;
+    el.classList.add('shake');
+    setTimeout(function () { el.classList.remove('shake'); }, 460);
+  }
+
+  /* ==========================================================================
+     5. 렌더링
+     ========================================================================== */
+  function render() {
+    document.documentElement.lang = state.lang;
+
+    /* 고정 문구 (data-i18n) */
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++) {
+      var key = nodes[i].getAttribute('data-i18n');
+      nodes[i].textContent = t(key);
+    }
+
+    /* 접근성 라벨 (data-i18n-aria) */
+    var ariaNodes = document.querySelectorAll('[data-i18n-aria]');
+    for (var a = 0; a < ariaNodes.length; a++) {
+      ariaNodes[a].setAttribute('aria-label', t(ariaNodes[a].getAttribute('data-i18n-aria')));
+    }
+
+    /* 언어 버튼 활성 표시 */
+    var langBtns = document.querySelectorAll('[data-lang]');
+    for (var j = 0; j < langBtns.length; j++) {
+      langBtns[j].classList.toggle('is-active', langBtns[j].getAttribute('data-lang') === state.lang);
+    }
+
+    showScreen(state.screen);
+
+    /* 진행한 것이 없을 때는 초기화 버튼을 눌러도 할 일이 없습니다 */
+    var resetTop = byId('resetBtn');
+    if (resetTop) resetTop.disabled = !state.startedAt;
+
+    if (state.screen === 'landing') renderLanding();
+    if (state.screen === 'stage') renderStage();
+    if (state.screen === 'clear') renderClear();
+  }
+
+  /* ---------- 랜딩 ---------- */
+  function renderLanding() {
+    var btn = byId('startBtn');
+    var note = byId('resumeNote');
+    var resetBtn = byId('landingResetBtn');
+    var inProgress = !!state.startedAt && !state.finishedAt;
+
+    btn.textContent = inProgress
+      ? fill(t('continueAt'), { n: state.stageIndex + 1 })
+      : t('start');
+
+    if (inProgress) {
+      note.hidden = false;
+      note.textContent = fill(t('progressLine'), {
+        n: state.stageIndex + 1,
+        total: MISSIONS.length,
+        time: fmtTime(elapsedMs())
+      });
+    } else {
+      note.hidden = true;
+    }
+
+    resetBtn.hidden = !inProgress;
+
+    /* 샘플 역 수를 실제 데이터에 맞춤 */
+    var chipStations = document.querySelector('[data-i18n="chipStations"]');
+    if (chipStations) {
+      chipStations.textContent = state.lang === 'ko'
+        ? MISSIONS.length + '개 역'
+        : MISSIONS.length + (MISSIONS.length === 1 ? ' station' : ' stations');
+    }
+  }
+
+  /* ---------- 스테이지 ---------- */
+  function renderStage() {
+    var m = MISSIONS[state.stageIndex];
+    if (!m) { finishRoute(); return; }
+
+    var solved = !!state.solved[m.id];
+    var hintsShown = state.hints[m.id] || 0;
+
+    /* 머리말 */
+    byId('stageTag').textContent = m.tag === 'sample' ? t('sampleTag') : String(m.tag || '');
+    byId('stageCounter').textContent = fill(t('stationOf'), {
+      n: state.stageIndex + 1,
+      total: MISSIONS.length
+    });
+    byId('clockText').textContent = fmtTime(elapsedMs());
+
+    /* 진행 바 */
+    var track = '';
+    for (var i = 0; i < MISSIONS.length; i++) {
+      var mm = MISSIONS[i];
+      var done = !!state.solved[mm.id];
+      var current = (i === state.stageIndex);
+      track += '<div class="track-item' + (done ? ' is-done' : '') + (current ? ' is-current' : '') + '">' +
+                 '<span class="track-dot">' + (done ? '✓' : (i + 1)) + '</span>' +
+                 '<span class="track-label">' + esc(tr(mm.station)) + '</span>' +
+               '</div>';
+      if (i < MISSIONS.length - 1) {
+        track += '<span class="track-link' + (done ? ' is-done' : '') + '"></span>';
+      }
+    }
+    byId('stageProgress').innerHTML = track;
+
+    /* 사진 (image 가 있으면 실제 사진, 없으면 자리 표시자) */
+    var photoHtml = '';
+    if (m.image) {
+      photoHtml = '<figure class="photo">' +
+        '<div class="photo-frame"><img src="' + esc(m.image) + '" alt="' + esc(tr(m.photoCaption)) + '"></div>' +
+      '</figure>';
+    } else {
+      photoHtml = '<figure class="photo">' +
+        '<div class="photo-empty">' +
+          '<svg class="photo-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">' +
+            '<rect x="3" y="5" width="18" height="14" rx="3"></rect>' +
+            '<circle cx="8.5" cy="10" r="1.6"></circle>' +
+            '<path d="M20 16l-4.5-4.5L9 18"></path>' +
+          '</svg>' +
+          '<span class="photo-note">' + esc(t('photoPlaceholder')) + '</span>' +
+          '<span class="photo-caption">' + esc(tr(m.photoCaption)) + '</span>' +
+        '</div>' +
+      '</figure>';
+    }
+
+    /* 정답 영역 */
+    var answerHtml;
+    if (solved) {
+      var isLast = state.stageIndex === MISSIONS.length - 1;
+      answerHtml =
+        '<div class="card solved-card">' +
+          '<div class="solved-mark" aria-hidden="true">✓</div>' +
+          '<div class="card-label">' + esc(t('cleared')) + '</div>' +
+          '<p class="success-text">' + nl2br(tr(m.success)) + '</p>' +
+          '<button type="button" class="btn btn-primary" id="nextBtn">' +
+            esc(isLast ? t('finishRoute') : t('nextStation')) + ' →' +
+          '</button>' +
+        '</div>';
+    } else {
+      answerHtml = '<div class="card answer-card" id="answerCard">' +
+        '<div class="card-label">' + esc(t('answerLabel')) + '</div>' +
+        '<p class="question">' + nl2br(tr(m.question)) + '</p>';
+
+      if (m.type === 'choice') {
+        var choices = m.choices || [];
+        answerHtml += '<div class="choices" id="choiceList" role="group" aria-label="' + esc(t('answerLabel')) + '">';
+        for (var c = 0; c < choices.length; c++) {
+          var isPicked = (picked[m.id] === c);
+          answerHtml += '<button type="button" class="choice' + (isPicked ? ' is-picked' : '') + '" data-choice="' + c + '">' +
+                          '<span class="choice-key" aria-hidden="true">' + String.fromCharCode(65 + c) + '</span>' +
+                          '<span class="choice-text">' + esc(tr(choices[c])) + '</span>' +
+                        '</button>';
+        }
+        answerHtml += '</div>' +
+          '<button type="button" class="btn btn-primary" id="checkBtn">' + esc(t('checkAnswer')) + '</button>' +
+          '<p class="fineprint">' + esc(t('choosePrompt')) + '</p>';
+      } else {
+        answerHtml += '<form class="answer-form" id="answerForm" autocomplete="off" novalidate>' +
+          '<input type="text" class="answer-input" id="answerInput" ' +
+            'inputmode="text" enterkeyhint="send" autocapitalize="off" autocorrect="off" ' +
+            'spellcheck="false" autocomplete="off" ' +
+            'placeholder="' + esc(tr(m.placeholder)) + '" ' +
+            'value="' + esc(state.draft) + '" ' +
+            'aria-label="' + esc(t('answerLabel')) + '">' +
+          '<button type="submit" class="btn btn-primary">' + esc(t('checkAnswer')) + '</button>' +
+        '</form>' +
+        '<p class="fineprint">' + esc(m.answerNote ? tr(m.answerNote) : t('answerNote')) + '</p>';
+      }
+      answerHtml += '</div>';
+    }
+
+    /* 힌트 버튼 */
+    var remaining = 2 - hintsShown;
+    var hintLabel = remaining > 0 ? fill(t('hintBtnCount'), { n: remaining }) : t('hintBtnNone');
+    var hintHtml = '<button type="button" class="btn btn-hint" id="hintBtn"' + (remaining <= 0 ? ' disabled' : '') + '>' +
+                     '<span aria-hidden="true">💡</span> ' + esc(hintLabel) +
+                   '</button>';
+
+    byId('stageBody').innerHTML =
+      '<div class="plate">' +
+        '<span class="line-badge line-badge--sm" aria-hidden="true">2</span>' +
+        '<span class="plate-ko">' + esc(m.station.ko) + '</span>' +
+        '<span class="plate-en">' + esc(m.station.en) + '</span>' +
+        '<span class="plate-code">' + esc(m.code) + '</span>' +
+      '</div>' +
+
+      '<h1 class="mission-title">' + esc(tr(m.missionTitle)) + '</h1>' +
+      '<p class="story">' + nl2br(tr(m.story)) + '</p>' +
+
+      photoHtml +
+
+      '<div class="card clue-card">' +
+        '<div class="card-label">' + esc(t('clueLabel')) + '</div>' +
+        '<p class="clue-text">' + nl2br(tr(m.clue)) + '</p>' +
+      '</div>' +
+
+      answerHtml +
+
+      hintHtml;
+  }
+
+  /* ---------- 클리어 ---------- */
+  function renderClear() {
+    var elapsed = elapsedMs();
+    var hints = totalHintsUsed();
+    var solvedCount = 0;
+    for (var i = 0; i < MISSIONS.length; i++) {
+      if (state.solved[MISSIONS[i].id]) solvedCount++;
+    }
+
+    var routeRows = '';
+    for (var j = 0; j < MISSIONS.length; j++) {
+      var mm = MISSIONS[j];
+      var used = state.hints[mm.id] || 0;
+      routeRows += '<li class="route-row">' +
+        '<span class="ok" aria-hidden="true">✓</span>' +
+        '<span class="route-name">' + (j + 1) + '. ' + esc(tr(mm.station)) +
+          '<span class="plate-en" style="margin-left:6px">' + esc(mm.code) + '</span></span>' +
+        '<span class="route-hints">' + esc(fill(t('hintN'), { n: used })) + '</span>' +
+      '</li>';
+    }
+
+    byId('clearBody').innerHTML =
+      '<div class="award">' +
+        '<div class="award-ring" aria-hidden="true"><span>2</span></div>' +
+        '<div class="kicker">LINE 2 · CLEAR</div>' +
+        '<h1>' + esc(t('clearTitle')) + '</h1>' +
+        '<p>' + esc(t('clearLead')) + '</p>' +
+      '</div>' +
+
+      '<div class="stats">' +
+        '<div class="stat"><span class="stat-value">' + fmtTime(elapsed) + '</span><span class="stat-key">' + esc(t('totalTime')) + '</span></div>' +
+        '<div class="stat"><span class="stat-value">' + hints + '</span><span class="stat-key">' + esc(t('hintsUsed')) + '</span></div>' +
+        '<div class="stat"><span class="stat-value">' + solvedCount + '/' + MISSIONS.length + '</span><span class="stat-key">' + esc(t('stationsDone')) + '</span></div>' +
+      '</div>' +
+
+      '<div class="card">' +
+        '<div class="card-label">' + esc(t('routeSummary')) + '</div>' +
+        '<ul class="route-list">' + routeRows + '</ul>' +
+      '</div>' +
+
+      '<div class="landing-cta" style="margin-top:6px">' +
+        '<button type="button" class="btn btn-primary" id="againBtn">' + esc(t('playAgain')) + '</button>' +
+      '</div>' +
+
+      '<p class="foot-note">' + esc(t('clearNote')) + '</p>';
+  }
+
+  /* ---------- 힌트 서랍 ---------- */
+  function renderDrawer() {
+    var m = MISSIONS[state.stageIndex];
+    if (!m) return;
+    var shown = state.hints[m.id] || 0;
+    var hints = m.hints || [];
+    var html = '';
+
+    for (var i = 0; i < shown && i < hints.length; i++) {
+      html += '<div class="hint-block">' +
+                '<div class="hint-n">' + esc(fill(t('hintN'), { n: i + 1 })) + '</div>' +
+                '<p>' + nl2br(tr(hints[i])) + '</p>' +
+              '</div>';
+    }
+
+    if (shown < hints.length) {
+      html += '<button type="button" class="btn btn-hint" id="revealBtn" style="margin-top:4px">' +
+                esc(fill(t('showHintN'), { n: shown + 1 })) +
+              '</button>';
+    } else {
+      html += '<p class="fineprint">' + esc(t('hintDone')) + '</p>';
+    }
+
+    byId('drawerBody').innerHTML = html;
+  }
+
+  function openDrawer() {
+    var m = MISSIONS[state.stageIndex];
+    if (!m || state.solved[m.id]) return;
+
+    /* 처음 열면 힌트 1을 바로 보여 줍니다 (= 힌트 1개 사용) */
+    var shown = state.hints[m.id] || 0;
+    if (shown === 0) {
+      state.hints[m.id] = 1;
+      saveState();
+      renderStage();
+    }
+    renderDrawer();
+    byId('hintDrawer').classList.add('is-open');
+    byId('hintDrawer').setAttribute('aria-hidden', 'false');
+    byId('hintBackdrop').classList.add('is-open');
+  }
+
+  function closeDrawer() {
+    byId('hintDrawer').classList.remove('is-open');
+    byId('hintDrawer').setAttribute('aria-hidden', 'true');
+    byId('hintBackdrop').classList.remove('is-open');
+  }
+
+  /* ---------- 초기화 확인 ---------- */
+  function openResetModal() {
+    byId('resetModalTitle').textContent = t('resetTitle');
+    byId('resetModalBody').textContent = t('resetBody');
+    byId('resetCancel').textContent = t('cancel');
+    byId('resetConfirm').textContent = t('resetConfirm');
+    byId('resetModal').classList.add('is-open');
+    byId('resetModal').setAttribute('aria-hidden', 'false');
+  }
+
+  function closeResetModal() {
+    byId('resetModal').classList.remove('is-open');
+    byId('resetModal').setAttribute('aria-hidden', 'true');
+  }
+
+  /* ==========================================================================
+     6. 게임 진행
+     ========================================================================== */
+  function ensureTimer() {
+    if (!state.startedAt) state.startedAt = Date.now();
+    if (clockTimer) clearInterval(clockTimer);
+    clockTimer = setInterval(function () {
+      if (state.screen !== 'stage') return;
+      var el = byId('clockText');
+      if (el) el.textContent = fmtTime(elapsedMs());
+    }, 1000);
+  }
+
+  function startOrResume() {
+    if (state.screen === 'clear') {
+      resetAll(true);
+      return;
+    }
+    if (!state.startedAt) {
+      state.startedAt = Date.now();
+      state.stageIndex = 0;
+    }
+    state.screen = 'stage';
+    saveState();
+    ensureTimer();
+    render();
+    var scroller = byId('scrollArea');
+    if (scroller) scroller.scrollTop = 0;
+    if (window.scrollTo) window.scrollTo(0, 0);
+  }
+
+  function checkText() {
+    var m = MISSIONS[state.stageIndex];
+    if (!m) return;
+    var raw = state.draft || '';
+    if (!raw.trim()) {
+      showToast(t('toastEmpty'), 'error');
+      shake(byId('answerCard'));
+      return;
+    }
+
+    var guess = normalize(raw);
+    if (!guess) {
+      showToast(t('toastEmpty'), 'error');
+      shake(byId('answerCard'));
+      return;
+    }
+    var list = m.answers || [];
+    var ok = false;
+    for (var i = 0; i < list.length; i++) {
+      if (normalize(list[i]) === guess) { ok = true; break; }
+    }
+
+    if (ok) {
+      markSolved(m);
+    } else {
+      showToast(t('toastWrong'), 'error');
+      shake(byId('answerCard'));
+    }
+  }
+
+  function checkChoice() {
+    var m = MISSIONS[state.stageIndex];
+    if (!m) return;
+    var pick = picked[m.id];
+    if (pick === undefined || pick === null) {
+      showToast(t('toastSelect'), 'error');
+      shake(byId('choiceList'));
+      return;
+    }
+    if (pick === m.correct) {
+      markSolved(m);
+    } else {
+      showToast(t('toastWrongChoice'), 'error');
+      shake(byId('choiceList'));
+    }
+  }
+
+  function markSolved(m) {
+    state.solved[m.id] = true;
+    state.draft = '';
+    saveState();
+    renderStage();
+    showToast(t('toastRight'), 'ok');
+    var scrollArea = byId('scrollArea');
+    if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight;
+  }
+
+  /* 처음 화면으로 (진행은 그대로 두고 나갔다가 이어서 하기) */
+  function goHome() {
+    closeDrawer();
+    state.screen = 'landing';
+    saveState();
+    render();
+    var scrollArea = byId('scrollArea');
+    if (scrollArea) scrollArea.scrollTop = 0;
+  }
+
+  function goNext() {
+    if (state.stageIndex >= MISSIONS.length - 1) {
+      finishRoute();
+      return;
+    }
+    state.stageIndex += 1;
+    state.draft = '';
+    saveState();
+    render();
+    var scrollArea = byId('scrollArea');
+    if (scrollArea) scrollArea.scrollTop = 0;
+  }
+
+  function finishRoute() {
+    state.finishedAt = Date.now();
+    state.screen = 'clear';
+    state.draft = '';
+    saveState();
+    if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
+    render();
+    var scrollArea = byId('scrollArea');
+    if (scrollArea) scrollArea.scrollTop = 0;
+  }
+
+  function resetAll(startFresh) {
+    closeDrawer();
+    closeResetModal();
+    if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
+    var lang = state.lang;
+    state = freshState();
+    state.lang = lang;
+    picked = {};
+    try { window.localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+    saveState();
+    render();
+    var scrollArea = byId('scrollArea');
+    if (scrollArea) scrollArea.scrollTop = 0;
+    if (startFresh) { startOrResume(); }
+  }
+
+  function setLang(lang) {
+    if (lang !== 'ko' && lang !== 'en') return;
+    if (state.lang === lang) return;
+
+    var input = byId('answerInput');
+    var hadFocus = !!(input && document.activeElement === input);
+    var caret = hadFocus ? input.selectionStart : null;
+
+    state.lang = lang;
+    saveState();
+    render();
+
+    /* 언어를 바꿔도 입력 중이던 답은 그대로 남습니다. */
+    var next = byId('answerInput');
+    if (hadFocus && next) {
+      next.focus();
+      if (caret !== null && next.setSelectionRange) {
+        try { next.setSelectionRange(caret, caret); } catch (e) { /* ignore */ }
+      }
+    }
+  }
+
+  /* ==========================================================================
+     7. 이벤트 연결
+     ========================================================================== */
+  function bindEvents() {
+
+    /* 언어 전환 (상단 바 + 랜딩 선택지) */
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest ? e.target.closest('[data-lang]') : null;
+      if (btn) {
+        setLang(btn.getAttribute('data-lang'));
+      }
+    });
+
+    /* 시작 / 이어하기 */
+    byId('startBtn').addEventListener('click', startOrResume);
+
+    /* 스테이지에서 처음 화면으로 */
+    byId('homeBtn').addEventListener('click', goHome);
+
+    /* 랜딩 초기화 */
+    byId('landingResetBtn').addEventListener('click', openResetModal);
+
+    /* 상단 초기화 */
+    byId('resetBtn').addEventListener('click', openResetModal);
+
+    /* 초기화 확인 */
+    byId('resetCancel').addEventListener('click', closeResetModal);
+    byId('resetConfirm').addEventListener('click', function () { resetAll(false); });
+    byId('resetModal').addEventListener('click', function (e) {
+      if (e.target === byId('resetModal')) closeResetModal();
+    });
+
+    /* 힌트 서랍 */
+    byId('hintBackdrop').addEventListener('click', closeDrawer);
+    byId('drawerClose').addEventListener('click', closeDrawer);
+
+    /* 스테이지 본문은 매번 다시 그려지므로 위임으로 처리 */
+    var body = byId('stageBody');
+
+    body.addEventListener('submit', function (e) {
+      if (e.target && e.target.id === 'answerForm') {
+        e.preventDefault();
+        checkText();
+      }
+    });
+
+    body.addEventListener('input', function (e) {
+      if (e.target && e.target.id === 'answerInput') {
+        state.draft = e.target.value;
+        saveState();
+      }
+    });
+
+    body.addEventListener('click', function (e) {
+      var target = e.target;
+      if (!target || !target.closest) return;
+
+      var choice = target.closest('[data-choice]');
+      if (choice) {
+        var m = MISSIONS[state.stageIndex];
+        if (m) {
+          picked[m.id] = parseInt(choice.getAttribute('data-choice'), 10);
+          var all = body.querySelectorAll('[data-choice]');
+          for (var i = 0; i < all.length; i++) {
+            all[i].classList.toggle('is-picked', all[i] === choice);
+          }
+        }
+        return;
+      }
+
+      if (target.closest('#checkBtn')) { checkChoice(); return; }
+      if (target.closest('#nextBtn')) { goNext(); return; }
+      if (target.closest('#hintBtn')) { openDrawer(); return; }
+      if (target.closest('#revealBtn')) { revealNextHint(); return; }
+    });
+
+    /* 클리어 화면 다시 플레이 (위임) */
+    document.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('#againBtn')) {
+        resetAll(true);
+      }
+    });
+
+    /* 키보드: ESC 로 닫기 */
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        closeDrawer();
+        closeResetModal();
+      }
+    });
+  }
+
+  function revealNextHint() {
+    var m = MISSIONS[state.stageIndex];
+    if (!m) return;
+    var shown = state.hints[m.id] || 0;
+    var total = (m.hints || []).length;
+    if (shown >= total) return;
+    state.hints[m.id] = shown + 1;
+    saveState();
+    renderDrawer();
+    renderStage();
+  }
+
+  /* ==========================================================================
+     8. 시작
+     ========================================================================== */
+  function init() {
+    state = loadState();
+
+    /* 저장된 화면이 'stage' 인데 모든 미션이 풀려 있으면 클리어로 정리 */
+    if (state.screen === 'stage') {
+      var allDone = true;
+      for (var i = 0; i < MISSIONS.length; i++) {
+        if (!state.solved[MISSIONS[i].id]) { allDone = false; break; }
+      }
+      if (allDone && MISSIONS.length > 0) {
+        state.screen = 'clear';
+        if (!state.finishedAt) state.finishedAt = Date.now();
+      }
+    }
+
+    bindEvents();
+    render();
+
+    if (state.screen === 'stage') ensureTimer();
+    saveState();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
