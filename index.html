@@ -2180,7 +2180,7 @@ body {
       routeRows += '<li class="route-row">' +
         '<span class="ok" aria-hidden="true">✓</span>' +
         '<span class="route-name">' + (j + 1) + '. ' + esc(tr(mm.station)) +
-          '<span class="plate-en" style="margin-left:6px">' + esc(mm.code) + '</span></span>' +
+          ' <span class="plate-en">' + esc(mm.code) + '</span></span>' +
         '<span class="route-hints">' + esc(fill(t('hintN'), { n: used })) + '</span>' +
       '</li>';
     }
