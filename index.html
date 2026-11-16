@@ -77,6 +77,8 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  word-break: keep-all;          /* Korean words stay whole; English breaks at spaces */
+  overflow-wrap: break-word;
   display: flex;
   justify-content: center;
   overscroll-behavior-y: none;
@@ -400,7 +402,7 @@ body {
 }
 .hero-lead {
   margin: 0 auto;
-  max-width: 34ch;
+  max-width: 36ch;
   font-size: 13.5px;
   line-height: 1.76;
   color: var(--text-2);
