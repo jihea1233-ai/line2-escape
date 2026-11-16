@@ -2056,8 +2056,9 @@ body {
     byId('stageProgress').innerHTML = track;
 
     /* 사진 — 증거물 사진(테이프로 붙인 Exhibit). image 가 없으면 자리 표시자 */
+    var exhibitLetter = String.fromCharCode(65 + (state.stageIndex % 26));
     var exhibitCap = '<figcaption class="photo-cap">' +
-        '<span class="ex">' + esc(fill(t('exhibit'), { n: 'A' })) + '</span>' +
+        '<span class="ex">' + esc(fill(t('exhibit'), { n: exhibitLetter })) + '</span>' +
         '<span>' + esc(tr(m.photoCaption)) + '</span>' +
       '</figcaption>';
 
